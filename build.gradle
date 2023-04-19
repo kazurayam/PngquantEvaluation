@@ -1,0 +1,28 @@
+plugins {
+    id 'groovy'
+}
+
+group 'com.kazurayam'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // https://mvnrepository.com/artifact/com.kazurayam/materialstore
+    testImplementation group: 'com.kazurayam', name: 'materialstore', version: '0.16.0'
+
+    // https://mvnrepository.com/artifact/com.kazurayam/subprocessj
+    testImplementation group: 'com.kazurayam', name: 'subprocessj', version: '0.3.4'
+
+    testImplementation 'org.apache.groovy:groovy:4.0.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+test {
+    useJUnitPlatform()
+    minHeapSize = "128m" // initial heap size
+    maxHeapSize = "2048m" // maximum heap size
+}
