@@ -2,10 +2,11 @@
 
 [NineBreakHomePageのスクリーンショット画像が大きすぎる](https://github.com/kazurayam/NineBreakHomePage/issues/62)
 
-
 [PNG圧縮ツールpngquantの使い方を解説](https://qiita.com/YutaManaka/items/bb5f634f7233e6a4ff49)
 
-https://pngquant.org/
+[png画像の圧縮には pngquant を使おう](https://qiita.com/thanks2music/items/309700a411652c00672a)
+
+本家　https://pngquant.org/
 
 ## やってみた
 
