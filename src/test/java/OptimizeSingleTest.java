@@ -1,53 +1,72 @@
-import com.kazurayam.materialstore.core.FileType;
-import com.kazurayam.materialstore.core.JobName;
-import com.kazurayam.materialstore.core.JobTimestamp;
-import com.kazurayam.materialstore.core.Material;
-import com.kazurayam.materialstore.core.MaterialstoreException;
-import com.kazurayam.materialstore.core.QueryOnMetadata;
-import com.kazurayam.materialstore.core.Store;
-import com.kazurayam.materialstore.core.Stores;
+import com.kazurayam.subprocessj.Subprocess;
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OptimizeSingleTest {
 
     private static Path sourceDir = Paths.get(".").resolve("src/test/fixtures/store");
-    private static Store sourceStore;
-    private static JobName jobName;
-    private static JobTimestamp jobTimestamp;
     private static Path targetDir = Paths.get(".").resolve("build/tmp/testOutput/OptimizeSingleTest").toAbsolutePath().normalize();
 
     @BeforeAll
     static void beforeAll() throws IOException {
-        sourceStore = Stores.newInstance(sourceDir);
         Files.createDirectories(targetDir);
-        jobName = new JobName("NineBreak");
-        jobTimestamp = new JobTimestamp("20230419_172442");
+    }
+
+    @BeforeEach
+    void beforeEach() throws IOException {
+        FileUtils.copyDirectory(sourceDir.toFile(), targetDir.toFile());
     }
 
     @Test
-    public void test_selectSinglePNG() throws MaterialstoreException {
-        Material mat = sourceStore.selectSingle(jobName, jobTimestamp, FileType.PNG);
-        assertNotNull(mat);
-        //System.out.println(mat.toJson(true));
-        assertEquals("ninebreak.jp", mat.getMetadata().get("URL.host"));
-        assertEquals("/index.php", mat.getMetadata().get("URL.path"));
-        assertEquals("1_ホーム", mat.getMetadata().get("menu"));
-        assertEquals(FileType.PNG, mat.getFileType());
+    public void test_pngquant() throws Exception {
+        Path objectDir = targetDir.resolve("NineBreak/20230419_172442/objects");
+        Map<String, Map<String, Long>> sizeRecord = new HashMap<>();
+        Files.list(objectDir).forEach( png -> {
+            // store the size of PNG files before size optimization
+            Map<String, Long> size = new HashMap<>();
+            size.put("before", png.toFile().length());
+            // now optimize the file size
+            Subprocess.CompletedProcess cp;
+            try {
+                cp = new Subprocess().run(Arrays.asList(
+                        "pngquant","--ext", ".png", "--force", "--speed", "1",
+                        png.toString()));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            cp.stdout().forEach(System.out::println);
+            cp.stderr().forEach(System.err::println);
+            assertEquals(0, cp.returncode());
+            // store the size of png files after optimization
+            size.put("after", png.toFile().length());
+            // record the size information
+            sizeRecord.put(png.getFileName().toString(), size);
+        });
+        // report how much the files were compressed
+        sizeRecord.keySet().forEach( fileName -> {
+            Long sizeBeforeOpt = sizeRecord.get(fileName).get("before");
+            Long sizeAfterOpt = sizeRecord.get(fileName).get("after");
+            Long delta = ((sizeBeforeOpt - sizeAfterOpt) * 100) / sizeBeforeOpt;
+            System.out.println(String.format("%s %d -> %d (Δ%d%%)",
+                    fileName, sizeBeforeOpt, sizeAfterOpt, delta));
+        });
     }
 
-    @Test
-    public void test_optimize_a_png() throws MaterialstoreException {
-        Material mat = sourceStore.selectSingle(jobName, jobTimestamp, FileType.PNG,
-                QueryOnMetadata.builder().put("menu", "3_ルール説明").build());
-        assertNotNull(mat);
-    }
 }
